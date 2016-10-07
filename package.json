@@ -1,0 +1,12 @@
+{
+  "name": "scrap-anime",
+  "version": "0.0.1",
+  "description": "Scrap streaming anime",
+  "main": "anime.js",
+  "author": "Kotaxdev",
+  "dependencies": {
+    "express": "latest",
+    "request": "latest",
+    "cheerio": "latest"
+  }
+}
