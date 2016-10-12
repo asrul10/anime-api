@@ -1,16 +1,34 @@
 var express = require('express');
 var app = express();
+var bodyParser = require('body-parser');
 var fs = require('fs');
 var request = require('request');
 var cheerio = require('cheerio');
 
 // Config
 var port = process.env.PORT | 8888;
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+var source = 'http://animeindo.web.id';
 
 // Route
 app.get('/', greeting);
 app.get('/anime', listAnime);
 app.get('/anime/:name', watchAnime);
+app.get('/anime/detail/:name', detailAnime);
+app.post('/anime/search', searchAnime);
+
+// Behavior
+/**
+ * Replace all string
+ * @param  {String} search
+ * @param  {String} replacement
+ * @return {String}
+ */
+String.prototype.replaceAll = function(search, replacement) {
+    var target = this;
+    return target.split(search).join(replacement);
+};
 
 // Controller
 function greeting(req, res) {
@@ -28,7 +46,7 @@ function greeting(req, res) {
  */
 function listAnime(req, res) {
 	var page = req.query.page || '0';
-	var url = 'http://animeindo.web.id/page/' + page;
+	var url = source + '/page/' + page;
 	var host = req.get('host');
 	var baseUrl = req.protocol + '://' + host + '/anime/';
 
@@ -74,7 +92,7 @@ function watchAnime(req, res) {
 	var baseUrl = req.protocol + '://' + host + '/anime/';
 
 	if (name) {
-		var url = 'http://animeindo.web.id/' + name;
+		var url = source + '/' + name;
 		request(url, function(error, response, html) {
 			if (!error) {
 				var $ = cheerio.load(html);
@@ -98,7 +116,7 @@ function watchAnime(req, res) {
 			    	stram: stream,
 			    	nav: {
 			    		prev: prev ? baseUrl + prev.split('/')[5] : false,
-			    		index: false,
+			    		index: index ? baseUrl + 'detail/' + index.split('/')[4] : false,
 			    		next: next ? baseUrl + next.split('/')[5] : false
 			    	}
 			    };
@@ -141,15 +159,58 @@ function getRating(res, name, baseResult) {
 }
 
 /**
- * Replace all string
- * @param  {String} search
- * @param  {String} replacement
- * @return {String}
+ * View Anime detail
+ * @param  {Object} req 
+ * @param  {Object} res 
+ * @return {Void}
  */
-String.prototype.replaceAll = function(search, replacement) {
-    var target = this;
-    return target.split(search).join(replacement);
-};
+function detailAnime(req, res) {
+	var name = req.params.name;
+	var host = req.get('host');
+	var baseUrl = req.protocol + '://' + host + '/anime/';
+
+	if (name) {
+		var url = source + '/category/' + name;
+		request(url, function(error, response, html) {
+			if (!error) {
+				var $ = cheerio.load(html);
+				var title, thumbnail, description, summary;
+				var episodes = [];
+				var desc = $('.cat_box_desc').children('div').text().split('Sinopsis:');
+				var epList = $('.episode_list');
+				title = $('.amin_week_box_up1').text();
+				thumbnail = $('.cat_image').children().attr('href');
+				description = desc[0];
+				summary = desc[1];
+				epList.each(function(index, el) {
+					episodes.push(baseUrl + $(this).children('a').attr('href').split('/')[5]);
+				});
+
+				res.status(200).json({
+					title: title ? title : 'No title',
+					thumbnail: thumbnail ? thumbnail : 'default',
+					description: description,
+					summary: summary ? summary : '',
+					episodes: episodes
+				});
+			} else {
+			    res.status(403).json({status: false, message: 'Page error!'});
+			}
+		});
+	} else {
+	    res.status(500).json({status: false, message: 'Anime not found!'});
+	}
+}
+
+function searchAnime(req, res) {
+	var search = req.body.filter || '';
+	var url = source + '/?s=' + search;
+	var host = req.get('host');
+	var baseUrl = req.protocol + '://' + host + '/anime/';
+	res.status(200).json({
+		status: search
+	});
+}
 
 // Run
 console.log('App Started');
