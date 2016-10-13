@@ -5,9 +5,10 @@
   "main": "anime.js",
   "author": "Kotaxdev",
   "dependencies": {
-    "express": "latest",
     "body-parser": "latest",
-    "request": "latest",
-    "cheerio": "latest"
+    "cheerio": "latest",
+    "express": "latest",
+    "fuse.js": "^2.5.0",
+    "request": "latest"
   }
 }
