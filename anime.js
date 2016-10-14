@@ -107,7 +107,7 @@ function detailAnime(req, res) {
 		request(url, function(error, response, html) {
 			if (!error) {
 				var $ = cheerio.load(html);
-				var title, thumbnail, description, rating, summary;
+				var title, stream, thumbnail, description, rating, summary;
 				var episodes = [];
 				var epList = $('.episode_list');
 				title = $('.amin_week_box_up1').text();
@@ -122,7 +122,6 @@ function detailAnime(req, res) {
 					rating = (parseFloat(rating) / 2).toFixed(2);
 					rating = parseFloat(rating);
 				}
-				console.log(indexRating);
 
 				var indexSummary = description.indexOf('Sinopsis');
 				summary = '';
@@ -134,12 +133,15 @@ function detailAnime(req, res) {
 					var watch = baseUrl + $(this).children('a').attr('href').split('/')[5];
 					watch = watch.replace('-subtitle-indonesia', '');
 					episodes.push(watch);
+					if (watch.indexOf(ep) !== -1) {
+						stream = watch;
+					}
 				});
 
 				res.status(200).json({
 					title: title ? title : 'No title',
 					thumbnail: thumbnail ? thumbnail : 'default',
-					stram: ep ? episodes[episodes.length - ep] : episodes[0],
+					stram: stream,
 					// description: description,
 					rating: rating,
 					summary: summary,
