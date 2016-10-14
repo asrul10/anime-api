@@ -15,8 +15,9 @@ var source = 'http://animeindo.web.id';
 // Route
 app.get('/', greeting);
 app.get('/anime', listAnime);
-app.get('/anime/:name/:ep', detailAnime);
+app.get('/anime/watch/:name', watchAnime);
 app.post('/anime/search', searchAnime);
+app.get('/anime/:name/:ep', detailAnime);
 
 // Behavior
 /**
@@ -66,8 +67,13 @@ function listAnime(req, res) {
 				thumbnail = image.children('.primary').attr('src');
 				url = image.attr('href');
 				if (url) {
-					episode = url.substr(url.indexOf('-subtitle-indonesia') - 2, 2);
-					url = url.substr(0, url.indexOf('-subtitle-indonesia') - 3);
+					var nameString = url.substr(0, url.indexOf('-subtitle-indonesia') - 3);
+					var numberEp = 2;
+					if (nameString.substr(nameString.length -1) === '-') {
+						numberEp = 3;
+					}
+					episode = url.substr(url.indexOf('-subtitle-indonesia') - numberEp, numberEp);
+					url = url.substr(0, url.indexOf('-subtitle-indonesia') - numberEp - 1);
 				}
 
 				datas.push({
@@ -94,7 +100,7 @@ function detailAnime(req, res) {
 	var name = req.params.name;
 	var ep = req.params.ep || '';
 	var host = req.get('host');
-	var baseUrl = req.protocol + '://' + host + '/anime/';
+	var baseUrl = req.protocol + '://' + host + '/anime/watch/';
 
 	if (name) {
 		var url = source + '/category/' + name;
@@ -111,11 +117,12 @@ function detailAnime(req, res) {
 				var indexRating = description.indexOf('Rating');
 				indexRating = indexRating != -1 ? indexRating + 8 : description.indexOf('Skor') + 6;
 				rating = 0.00;
-				if (indexRating != -1) {
+				if (indexRating !== 5) {
 					rating = description.substr(indexRating, 4);
 					rating = (parseFloat(rating) / 2).toFixed(2);
 					rating = parseFloat(rating);
 				}
+				console.log(indexRating);
 
 				var indexSummary = description.indexOf('Sinopsis');
 				summary = '';
@@ -124,13 +131,16 @@ function detailAnime(req, res) {
 				}
 
 				epList.each(function(index, el) {
-					episodes.push(baseUrl + $(this).children('a').attr('href').split('/')[5]);
+					var watch = baseUrl + $(this).children('a').attr('href').split('/')[5];
+					watch = watch.replace('-subtitle-indonesia', '');
+					episodes.push(watch);
 				});
 
 				res.status(200).json({
 					title: title ? title : 'No title',
 					thumbnail: thumbnail ? thumbnail : 'default',
-					stream: ep ? episodes[episodes.length - ep] : episodes[0], // Sampai sini
+					stram: ep ? episodes[episodes.length - ep] : episodes[0],
+					// description: description,
 					rating: rating,
 					summary: summary,
 					episodes: episodes
@@ -141,6 +151,30 @@ function detailAnime(req, res) {
 		});
 	} else {
 	    res.status(500).json({status: false, message: 'Anime not found!'});
+	}
+}
+
+function watchAnime(req, res) {
+	var name = req.params.name;
+
+	if (name) {
+		var url = source + '/' + name + '-subtitle-indonesia';
+		request(url, function(error, response, html) {
+			if (!error) {
+				var $ = cheerio.load(html);
+				var stream, streamStart, streamStop;
+				var video = $('.player-area');
+
+				stream = video.children().children().children().children('div').children('script').text();
+				streamStart = stream.indexOf('http://www.blogger.com/video-play.mp4');
+				streamStop = stream.indexOf('"image"') - streamStart;
+				stream = stream.substr(streamStart, streamStop - 10);
+
+				res.redirect(stream);
+			} else {
+  			    res.status(403).json({status: false, message: 'Page error!'});
+  			}
+		});
 	}
 }
 
