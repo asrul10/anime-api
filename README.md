@@ -7,3 +7,6 @@ Free anime streaming API
 `GET | anime/:title/:episode` : Detail anime, `:title` is title of anime, `:episode` number episode (not required)
 
 `POST | anime/search` : Search anime, body `filter` keyword to search
+
+## Live Demo
+http://anime.kotaxdev.com/
